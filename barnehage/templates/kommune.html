@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<form method="POST" action="/kommune">
+        <label for="valgtkommune">Kommune:</label>
+        <input type="text" id="valgtkommune" name="valgtkommune" />
+        <input type="submit" value="Søk kommune">
+</form>
+{% endblock %}

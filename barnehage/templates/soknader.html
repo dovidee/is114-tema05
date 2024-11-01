@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+<!-- Skriv inn din kode her for å returnere svar for bruksscenario om svar på en søknad. --> 
+{% block content %}
+<table border=1>
+        <tr>
+                <th>Navn forelder 1</th>
+                <th>Navn forelder 2</th>
+                <th>Adresse forelder 1</th>
+                <th>Adresse forelder 2</th>
+                <th>Telefonnummer forelder 1</th>
+                <th>Telefonnummer forelder 2</th>
+                <th>Personnummer forelder 1</th>
+                <th>Personnummer forelder 2</th>
+                <th>Personnummer barnet 1</th>
+                <th>Personnummer barnet 2</th>
+                <th>Barnehage prioritert</th>
+                <th>Oppstartsdato</th>
+                <th>Bruttoinntekt hushold</th>
+                <th>Valgt barnehage</th>
+                <th>Status</th>
+                <th>Fortrinnsrett</th>
+        </tr>
+	{% for item in values %}
+	<tr>
+		<td>{{ item.navn_forelder_1 }}</td>
+                <td>{{ item.navn_forelder_2 }}</td>
+                <td>{{ item.adresse_forelder_1 }}</td>
+                <td>{{ item.adresse_forelder_2 }}</td>
+                <td>{{ item.tlf_nr_forelder_1 }}</td>
+                <td>{{ item.tlf_nr_forelder_2 }}</td>
+                <td>{{ item.personnummer_forelder_1 }}</td>
+                <td>{{ item.personnummer_forelder_2 }}</td>
+                <td>{{ item.personnummer_barnet_1 }}</td>
+                <td>{{ item.personnummer_barnet_2 }}</td>
+                <td>{{ item.liste_over_barnehager_prioritert_5 }}</td>
+                <td>{{ item.tidspunkt_for_oppstart }}</td>
+                <td>{{ item.brutto_inntekt_husholdning }}</td>
+                <td>{{ item.har_barnehage }}</td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.fortrinnsrett }}</td>
+	</tr>
+	{% endfor %}
+</table>
+{% endblock %}

@@ -43,13 +43,33 @@ def initiate_db(db_name):
     barn = pd.DataFrame(columns = kolonner_barn)
     soknad  = pd.DataFrame(columns = kolonner_soknad)
     
-    
     with pd.ExcelWriter(db_name) as writer:  
         forelder.to_excel(writer, sheet_name='foresatt')
         barnehage.to_excel(writer, sheet_name='barnehage')
         barn.to_excel(writer, sheet_name='barn')
         soknad.to_excel(writer, sheet_name='soknad')
-    
+      '''
+        # DOVIDEE: ubrukt siden bruker heller sqlalchemy for soknader og barnehage
+        forelderSAV = forelder.to_html()
+        forelderCON = open("templates/forelder-display.html", "w")
+        forelderCON.write(forelderSAV)
+        forelderCON.close()
+
+        barnehageSAV = barnehage.to_html()
+        barnehageCON = open("templates/barnehage-display.html", "w")
+        barnehageCON.write(barnehageSAV)
+        barnehageCON.close()
+
+        barnSAV = barn.to_html()
+        barnCON = open("templates/barn-display.html", "w")
+        barnCON.write(barnSAV)
+        barnCON.close()
+
+        soknadSAV = soknad.to_html()
+        soknadCON = open("templates/soknad-display.html", "w")
+        soknadCON.write(soknadSAV)
+        soknadCON.close()
+      '''
     """
     b1 = Barn(1, "09012356472")
     f1 = Foresatt(1, "Ole Nordmann", "Bekkeveien 100", "98434344", "09079089332")

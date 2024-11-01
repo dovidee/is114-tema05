@@ -1,10 +1,14 @@
 # kgcontroller module
 import pandas as pd
 import numpy as np
+import altair as alt
+import plotly
+import plotly.express as px
+from functools import reduce
 from dbexcel import *
 from kgmodel import *
-
-
+import sqlite3
+from flask import request
 # CRUD metoder
 
 # Create
@@ -113,9 +117,155 @@ def select_barn(b_pnr):
     else:
         return series.iloc[0] # returnerer kun det første elementet i series
     
-    
-# --- Skriv kode for select_soknad her
+# --- Skriv kode for behandle_soknad her
+def behandle_soknad(dat):
+    prioritert = dat['liste_over_barnehager_prioritert_5']
+    prioritert = prioritert.split(', ') # split user input
+    fortrinn1 = dat.get('fortrinnsrett_barnevern')
+    fortrinn2 = dat.get('fortrinnsrett_sykdom_i_familien')
+    fortrinn3 = dat.get('fortrinnsrett_sykdome_paa_barnet')
+    conn = sqlite3.connect('instance/janifuni.sqlite3')
+    cursor = conn.cursor() # session.execute e bedre ik
+    result = cursor.execute('SELECT * FROM barnehage')
+    columns = [desc[0] for desc in result.description]
+    bhdf = pd.DataFrame(cursor.fetchall(), columns=columns) # sql til pandas
+    # dat = ('STATUS', 'FORTRINNSRETT')
+    if fortrinn1 != None or fortrinn2 != None or fortrinn3 != None: # hvis har fortrinnsrett
+        if prioritert == ['']:
+            try: # trenger ikke å stjele
+                returnNavn = gi_plass(bhdf, cursor, conn)
+                dat = (returnNavn, 'TILBUD', 'JA')
+                return dat
+            except Exception as error: # stjel plass
+                bhdf = bhdf.sort_values(by='barnehage_ledige_plasser', ascending=False, ignore_index=True) # sorter høy
+                bhNavn = bhdf.loc[0]['barnehage_navn']
+                returnNavn = stjel_plass(bhNavn, cursor, conn)
+                if returnNavn == None:
+                    dat = (returnNavn, 'AVSLAG', 'JA')
+                    return dat
+                else:
+                    dat = (returnNavn, 'TILBUD', 'JA')
+                    return dat
+        else: # FIX DIZ SHIDDDDDDDDDDDDDDDDDD
+            print('alle ledig', bhdf)
+            bhdfPrio = bhdf[bhdf['barnehage_navn'].isin(prioritert)] # vis kun prioritert
+            try: # prøv vanlig order
+                returnNavn = gi_plass_prio(bhdfPrio, cursor, conn, prioritert)
+                dat = (returnNavn, 'TILBUD', 'JA')
+                print('Prioritert funker!')
+                return dat
+            except: # første var ikke ledig så vanlig order
+                print('Kan ikke sortere!')
+                try:
+                    returnNavn = gi_plass(bhdf, cursor, conn)
+                    dat = (returnNavn, 'TILBUD', 'JA')
+                    return dat
+                except: # må vær tom
+                    returnNavn = stjel_plass_full(bhdf, cursor, conn) # stjel fra høyeste antall
+                    if returnNavn == None:
+                        dat = (returnNavn, 'AVSLAG', 'JA')
+                        return dat
+                    else:
+                        dat = (returnNavn, 'TILBUD', 'JA')
+                        return dat
+    else: # vanlig person
+        if prioritert == ['']:
+            try:
+                returnNavn = gi_plass(bhdf, cursor, conn)
+                dat = (returnNavn, 'TILBUD', 'NEI')
+                return dat
+            except Exception as error: # ingen plass
+                print('Ingen ledig:', error)
+                dat = ('', 'AVSLAG', 'NEI')
+                return dat
+        else:
+            bhdfPrio = bhdf[bhdf['barnehage_navn'].isin(prioritert)] # vis kun prioritert
+            try:
+                returnNavn = gi_plass_prio(bhdfPrio, cursor, conn, prioritert)
+                dat = (returnNavn, 'TILBUD', 'NEI')
+                print('Prioritert funker!')
+                return dat
+            except: # kunne ikke sortere
+                print('Kan ikke sortere!')
+                if len(prioritert) == 1: 
+                    print('Kun 1 prioritert')
+                    try: # første prioritert har 0 plasser, så prøv uten
+                        returnNavn = gi_plass(bhdf, cursor, conn)
+                        dat = (returnNavn, 'TILBUD', 'NEI')
+                        return dat
+                    except: # funka ikke
+                        print('Ingen plasser igjen')
+                        dat = ('', 'AVSLAG', 'NEI')
+                        return dat
+                else:
+                    print('Ingen plasser igjen')
+                    dat = ('', 'AVSLAG', 'NEI')
+                    return dat
+def gi_plass(df, cur, con):
+    df = df[(df['barnehage_ledige_plasser'] != 0)] # fjern null
+    df = df.sort_values(by='barnehage_ledige_plasser', ascending=False, ignore_index=True) # sorter høy
+    bhNavn = df.loc[0]['barnehage_navn']
+    bhPlass = df.loc[0]['barnehage_ledige_plasser'] - 1
+    bhAnt = df.loc[0]['barnehage_antall_plasser'] + 1
+    print('Ledig', bhNavn)
+    cur.execute('UPDATE barnehage SET barnehage_ledige_plasser = ?, barnehage_antall_plasser = ? WHERE barnehage_navn = ?', (int(bhPlass), int(bhAnt), bhNavn))
+    print('Lagt i DB!')
+    con.commit()
+    con.close()
+    print(df)
+    return bhNavn
 
+def gi_plass_prio(df, cur, con, pri):
+    df = df.sort_values(by='barnehage_navn', key=lambda column: column.map(lambda e: pri.index(e)), ignore_index=False) # sorter prioritert
+    df = df[(df['barnehage_ledige_plasser'] != 0)] # fjern null
+    df = df.reset_index(drop=True) # reset index
+    bhNavn = df.loc[0]['barnehage_navn']
+    bhPlass = df.loc[0]['barnehage_ledige_plasser'] - 1
+    bhAnt = df.loc[0]['barnehage_antall_plasser'] + 1
+    print('Ledig', bhNavn)
+    cur.execute('UPDATE barnehage SET barnehage_ledige_plasser = ?, barnehage_antall_plasser = ? WHERE barnehage_navn = ?', (int(bhPlass), int(bhAnt), bhNavn))
+    print('Lagt i DB!')
+    con.commit()
+    con.close()
+    print(df)
+    return bhNavn
+
+def stjel_plass(bhNavn, cur, con): # stjel fra nyeste ID
+    tempRett = 'NEI'
+    tempStat = 'AVSLAG'
+    tempStat2 = 'TILBUD'
+    # finn bruker som ikke har fortrinnsrett og har tilbud til plass
+    checkexec = cur.execute('UPDATE users SET status = ? WHERE har_barnehage = ? AND status = ? AND fortrinnsrett = ? ORDER BY id DESC LIMIT 1', (tempStat, bhNavn, tempStat2, tempRett))
+    hasexec = checkexec.rowcount # 0 hvis alle har fortrinn, 1 hvis ingen har fortrinn
+    if hasexec == 1:
+        print('Stjal plass!', bhNavn)
+        con.commit()
+        con.close()
+        return bhNavn
+    else:
+        con.close()
+        print('Alle har fortrinnsrett :(')
+        return None
+
+def stjel_plass_full(df, cur, con): # robin hood style
+    df = df[(df['barnehage_antall_plasser'] != 0)] # finn kun de med antall
+    df = df.sort_values(by='barnehage_ledige_plasser', ascending=False, ignore_index=True) # sorter høy
+    bhNavn = df.loc[0]['barnehage_navn']
+    tempRett = 'NEI'
+    tempStat = 'AVSLAG'
+    tempStat2 = 'TILBUD'
+    # finn bruker som ikke har fortrinnsrett og har tilbud til plass
+    checkexec = cur.execute('UPDATE users SET status = ? WHERE har_barnehage = ? AND status = ? AND fortrinnsrett = ? ORDER BY id DESC LIMIT 1', (tempStat, bhNavn, tempStat2, tempRett))
+    hasexec = checkexec.rowcount
+    if hasexec == 1:
+        print('Stjal plass med prioritering!', bhNavn)
+        con.commit()
+        con.close()
+        return bhNavn
+    else:
+        con.close()
+        print('Alle har fortrinnsrett med prioritering :(')
+        return None
 
 # ------------------
 # Update
@@ -123,7 +273,6 @@ def select_barn(b_pnr):
 
 # ------------------
 # Delete
-
 
 # ----- Persistent lagring ------
 def commit_all():
@@ -203,3 +352,18 @@ def test_df_to_object_list():
                              r['barnehage_antall_plasser'],
                              r['barnehage_ledige_plasser']),
          axis=1).to_list()[0].barnehage_navn == "Sunshine Preschool"
+
+# ------ Vis kommune graf ------
+
+def kommune_bar(kommune : str) -> None:
+    exc = pd.read_excel('kgkommune.xlsx')
+    matched = exc['Sted'].str.fullmatch(kommune)
+    chosen = exc.loc[matched[matched].index] # Boolean indexing til å finne kommune index
+    to_flatten = chosen.values.tolist() # Velg tallene
+    reduced_row = reduce(lambda x,y: x+y, to_flatten) # Fjern listen ut av listen med flatten
+    reduced_row.pop(0) # Fjern kommunen
+    reduced_col = chosen.columns.difference(['Sted'])
+    data = {"År":reduced_col, "Prosent":reduced_row} # Samle årene og tallene i data
+    exc = pd.DataFrame(data) # Lag en dataframe ut av data
+    fig = px.bar(exc, x='År', y='Prosent', barmode='group')
+    return fig
