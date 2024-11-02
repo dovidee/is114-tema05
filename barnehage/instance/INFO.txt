@@ -1,0 +1,2 @@
+run kg.py som root
+reset db heilt nederst i kg.py hvis du vil reset (er kommentert)
