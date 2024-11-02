@@ -108,6 +108,14 @@ def svar():
     print(information)
     return render_template('svar.html', data=information)
 
+<<<<<<< HEAD
+=======
+@app.route('/commit')
+def commit():
+    commit_all()
+    return render_template('commit.html')
+
+>>>>>>> 56f551b (feddi)
 if __name__ == '__main__':
     with app.app_context():
        db.create_all()
