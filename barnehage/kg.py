@@ -88,11 +88,6 @@ def behandle():
     else:
         return render_template('soknad.html')
 
-@app.route('/fprio')
-def fprio():
-    return render_template('error.html')
-
-
 @app.route('/kommune', methods=['GET', 'POST'])
 def kommune():
    if request.method == 'POST':
@@ -112,11 +107,6 @@ def svar():
     information = session['information']
     print(information)
     return render_template('svar.html', data=information)
-
-@app.route('/commit')
-def commit():
-    commit_all()
-    return render_template('commit.html')
 
 if __name__ == '__main__':
     with app.app_context():
