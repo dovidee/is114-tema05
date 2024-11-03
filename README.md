@@ -11,4 +11,4 @@ seperer "," slik for prioritering:
 - ABC Kindergarten _(om kun 1 prioritering og den er tom for plasser, vil den resette prioritering til høyeste)_
 
 # post clarity
-skjønte at jeg ikke kan bruke pandas dataframe for queries og kunne bare brukt mer komplekse sql queries men kan ikke CONCAT det
+skjønte at jeg ikke kan bruke pandas dataframe for queries og kunne bare brukt mer komplekse sql queries men "kan ikke CONCAT det"
