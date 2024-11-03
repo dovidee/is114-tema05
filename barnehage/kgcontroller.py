@@ -270,6 +270,7 @@ def stjel_plass_full(df, cur, con): # robin hood style
             con.close()
             return 'Unknown' # fikser senere
         else: # funka ikke
+            con.close()
             print('Alle har fortrinnsrett med prioritering :(')
             return None
 
