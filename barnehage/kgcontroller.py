@@ -137,9 +137,7 @@ def behandle_soknad(dat):
                 dat = (returnNavn, 'TILBUD', 'JA')
                 return dat
             except Exception as error: # stjel plass
-                bhdf = bhdf.sort_values(by='barnehage_ledige_plasser', ascending=False, ignore_index=True) # sorter høy
-                bhNavn = bhdf.loc[0]['barnehage_navn']
-                returnNavn = stjel_plass(bhNavn, cursor, conn)
+                returnNavn = stjel_plass(cursor, conn)
                 if returnNavn == None:
                     dat = (returnNavn, 'AVSLAG', 'JA')
                     return dat
@@ -230,18 +228,18 @@ def gi_plass_prio(df, cur, con, pri):
     print(df)
     return bhNavn
 
-def stjel_plass(bhNavn, cur, con): # stjel fra nyeste ID
+def stjel_plass(cur, con): # stjel fra nyeste ID
     tempRett = 'NEI'
     tempStat = 'AVSLAG'
     tempStat2 = 'TILBUD'
     # finn bruker som ikke har fortrinnsrett og har tilbud til plass
-    checkexec = cur.execute('UPDATE users SET status = ? WHERE har_barnehage = ? AND status = ? AND fortrinnsrett = ? ORDER BY id DESC LIMIT 1', (tempStat, bhNavn, tempStat2, tempRett))
+    checkexec = cur.execute('UPDATE users SET status = ? WHERE status = ? AND fortrinnsrett = ? ORDER BY id DESC LIMIT 1', (tempStat, tempStat2, tempRett))
     hasexec = checkexec.rowcount # 0 hvis alle har fortrinn, 1 hvis ingen har fortrinn
     if hasexec == 1:
-        print('Stjal plass!', bhNavn)
+        print('Stjal plass!', 'Unknown') # fikser senere
         con.commit()
         con.close()
-        return bhNavn
+        return 'Unknown' # fikser senere
     else:
         con.close()
         print('Alle har fortrinnsrett :(')
@@ -262,10 +260,18 @@ def stjel_plass_full(df, cur, con): # robin hood style
         con.commit()
         con.close()
         return bhNavn
-    else:
-        con.close()
-        print('Alle har fortrinnsrett med prioritering :(')
-        return None
+    else: # siden den velger høyeste fra listen hver gang, prøv en random uten
+        print('Kan ikke sortere! (har fortrinnsrett)')
+        checkexec2 = cur.execute('UPDATE users SET status = ? WHERE status = ? AND fortrinnsrett = ? ORDER BY id DESC LIMIT 1', (tempStat, tempStat2, tempRett))
+        hasexec2 = checkexec2.rowcount
+        if hasexec2 == 1:
+            print('Stjal plass!', 'Unknown') # fikser senere
+            con.commit()
+            con.close()
+            return 'Unknown' # fikser senere
+        else: # funka ikke
+            print('Alle har fortrinnsrett med prioritering :(')
+            return None
 
 # ------------------
 # Update
