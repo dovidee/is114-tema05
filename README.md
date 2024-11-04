@@ -6,7 +6,7 @@ Kode for OBLIG 5
 - reset db heilt nederst i kg.py (er kommentert)
 
 # prioritering
-seperer "," slik for prioritering:
+separer "," slik for prioritering:
 - ABC Kindergarten, Tiny Tots Academy, Giggles and Grins Childcare, Playful Pals Daycare, 123 Learning Center, Happy Days Nursery, Sunshine Preschool _(om første prioritering er tom for plasser, vil den velge Tiny Tots Academy)_
 - ABC Kindergarten _(om kun 1 prioritering og den er tom for plasser, vil den resette prioritering til høyeste)_
 
