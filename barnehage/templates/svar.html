@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+<!-- Skriv inn din kode her for å returnere svar for bruksscenario om svar på en søknad. -->
+{% block content %}
+<table border=1>
+        <tr>
+                <th>Plass</th>
+                <th>Svar</th>
+        </tr>
+        <tr>
+                <td>{{ sdHar | safe }}</td>
+                <td>{{ sdStat | safe}} </td>
+        </tr>
+</table>
+{% endblock %}

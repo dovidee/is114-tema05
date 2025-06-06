@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+<!-- Skriv inn din kode her for å returnere svar for bruksscenario om svar på en søknad. --> 
+{% block content %}
+<table border=1>
+        <tr>
+                <th>Navn</th>
+                <th>Antall plasser</th>
+                <th>Antall ledige plasser</th>
+        </tr>
+	{% for item in values %}
+	<tr>
+		<th>{{ item.barnehage_navn }}</th>
+                <td>{{ item.barnehage_antall_plasser }}</td>
+                <td>{{ item.barnehage_ledige_plasser }}</td>
+	</tr>
+	{% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,9 @@
+altar>5
+flask
+flask_sqlalchemy
+numpy
+pandas
+plotly
+
+
+
