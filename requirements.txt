@@ -4,6 +4,3 @@ flask_sqlalchemy
 numpy
 pandas
 plotly
-
-
-

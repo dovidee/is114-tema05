@@ -124,7 +124,7 @@ def behandle_soknad(dat):
     fortrinn1 = dat.get('fortrinnsrett_barnevern')
     fortrinn2 = dat.get('fortrinnsrett_sykdom_i_familien')
     fortrinn3 = dat.get('fortrinnsrett_sykdome_paa_barnet')
-    conn = sqlite3.connect('instance/janifuni.sqlite3')
+    conn = sqlite3.connect('instance/db.sqlite3')
     cursor = conn.cursor() # session.execute e bedre ik
     result = cursor.execute('SELECT * FROM barnehage')
     columns = [desc[0] for desc in result.description]

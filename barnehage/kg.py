@@ -15,7 +15,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 app.secret_key = 'TAMALALALAALLAALLAAAAAAAAAAAAAAAAAAA0OBITXORM' # nødvendig for session
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///janifuni.sqlite3'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.permanent_session_lifetime = timedelta(minutes=5)
 
