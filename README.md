@@ -1,11 +1,15 @@
 # Barnehageopptak
 
-Webapplikasjon for søknad om barnehageplass, skrevet i Flask. Applikasjonen tar imot en søknad,
-behandler den automatisk mot antall ledige plasser og gir søkeren umiddelbart svar (`TILBUD` eller
-`AVSLAG`). I tillegg viser den en oversikt over alle barnehager, alle innsendte søknader og
-statistikk over andel barn i barnehage per kommune.
+Obligatorisk oppgave 5 i IS-114 ved Universitetet i Agder, høsten 2024. En webapplikasjon for
+søknad om barnehageplass, skrevet i Flask. Applikasjonen tar imot en søknad, behandler den
+automatisk mot antall ledige plasser og gir søkeren umiddelbart svar (`TILBUD` eller `AVSLAG`).
+I tillegg viser den en oversikt over alle barnehager, alle innsendte søknader og statistikk over
+andel barn i barnehage per kommune.
 
-Prosjektet ble laget som obligatorisk oppgave 5 i IS-114 ved Universitetet i Agder.
+Utgangspunktet er et kodeskjelett utlevert i emnet, og oppgaveteksten ligger fortsatt igjen på
+forsiden i `index.html`. Det som er skrevet her, er opptaksalgoritmen i `kgcontroller.py`, malene
+for svar, søknadsoversikt, barnehageliste og kommunestatistikk, og rutene som hører til dem i
+`kg.py`.
 
 ## Kjøre lokalt
 
@@ -22,7 +26,8 @@ python kg.py
 Applikasjonen kjører på `http://127.0.0.1:5000`. Alle stier i koden er relative, så `kg.py` må
 startes fra mappen `barnehage`.
 
-Excel-databasen kan bygges på nytt ved å kjøre `python initiatedb.py`. Barnehagetabellen i
+Excel-databasen skulle kunne bygges på nytt med `python initiatedb.py`, men filen stopper med
+`IndentationError` slik den står (se [Merknader](#merknader)). Barnehagetabellen i
 SQLite-databasen nullstilles ved å fjerne kommentaren rundt blokken «Reset barnehage data» nederst
 i `kg.py` og kjøre filen en gang.
 
@@ -104,10 +109,11 @@ ingen av de prioriterte barnehagene har ledige plasser.
 fortrinnsrett som har status `TILBUD` settes til `AVSLAG`, og plassen gis til søkeren med
 fortrinnsrett. Feiler hvis alle eksisterende tilbud tilhører søkere med fortrinnsrett.
 
-**`stjel_plass_full`**: samme prinsipp, men målrettet. Barnehagen med flest tildelte plasser
-velges, og den nyeste søknaden uten fortrinnsrett i nettopp den barnehagen settes til `AVSLAG`.
-Finnes ingen slik søknad, faller metoden tilbake til å frigjøre en vilkårlig plass som i
-`stjel_plass`.
+**`stjel_plass_full`**: samme prinsipp, men målrettet. Barnehager uten tildelte plasser
+filtreres bort, resten sorteres, og den nyeste søknaden uten fortrinnsrett i den øverste
+barnehagen settes til `AVSLAG`. Finnes ingen slik søknad, faller metoden tilbake til å frigjøre en
+vilkårlig plass som i `stjel_plass`. Sorteringen er ment å plukke barnehagen med flest tildelte
+plasser, men gjør det ikke (se [Merknader](#merknader)).
 
 ### Eksempler
 
@@ -148,6 +154,76 @@ Merk at Nginx normalt bare er en reverse proxy og aldri rører databasefilen sel
 til prosessen bak proxyen som må ha skrivetilgang. På RHEL-baserte systemer og Fedora kan SELinux
 blokkere skriving selv med riktige rettigheter. Da må filen merkes med
 `chcon -t httpd_sys_rw_content_t`.
+
+## Merknader
+
+Prosjektet ble aldri gjort ferdig. Oblig 5 falt bort som krav underveis i semesteret, og arbeidet
+stoppet der det sto den dagen. Punktene under er derfor ikke feil som slapp gjennom en innlevering,
+men et bilde av hvor koden lå da den ble lagt fra seg: halvferdige grener, plassholdere merket
+`# fikser senere`, oppgave 3 som aldri ble påbegynt, og et Excel-lag på vei ut til fordel for
+SQLite uten at flyttingen ble fullført. Listen tar for seg det som faktisk ryker eller gir feil
+svar, ikke skrivefeil og ubrukte importer, og står her som notat til meg selv.
+
+- `initiatedb.py` kjører ikke. Linje 51 starter en trippel-fnutt-blokk med seks mellomrom innrykk
+  inne i en `with`-blokk som ligger på åtte, og Python stopper med `IndentationError: unindent does
+  not match any outer indentation level` før en eneste linje er utført. `kgdata.xlsx` i repoet er
+  altså bygget med en tidligere versjon av filen, og skriptet må rettes før det kan kjøres igjen.
+- `stjel_plass` returnerer strengen `'Unknown'`. Den finner riktig søknad å sette til `AVSLAG`,
+  men vet ikke hvilken barnehage plassen tilhørte, så søkeren får `TILBUD` i en barnehage som ikke
+  finnes. Barnehagetabellen røres heller ikke, så den frigjorte plassen registreres ingen steder:
+  en søker mister plassen sin, en annen får den, og ingen av tallene i `/barnehager` endrer seg.
+  To `# fikser senere` i samme funksjon sier det meste.
+- `barnehage_antall_plasser` betyr to forskjellige ting. I `initiatedb.py` er det den totale
+  kapasiteten (50, 25, 35, 12, 15, 10, 40), mens i SQLite settes den til `0` av reset-blokken i
+  `kg.py` og økes med 1 for hver tildeling, altså antall **tildelte** plasser. Kolonnen heter
+  likevel «Antall plasser» i `barnehager.html`, så en fersk database påstår at alle sju barnehagene
+  har null plasser totalt og samtidig har ledige plasser. Riktig navn hadde vært
+  `barnehage_tildelte_plasser`.
+- `stjel_plass_full` sorterer på feil kolonne. Kommentaren sier «stjel fra høyeste antall» og
+  filtreringen fjerner riktignok barnehager med `barnehage_antall_plasser == 0`, men
+  `sort_values` sorterer på `barnehage_ledige_plasser`. Metoden nås bare når alt er fullt, altså
+  når alle ledige plasser er 0, så sorteringen gjør ingenting og `df.loc[0]` plukker den første
+  raden i id-rekkefølge. Meningen var `barnehage_antall_plasser`, og resultatet er at plassen
+  stjeles fra en vilkårlig barnehage.
+- To bare `except:` uten unntakstype fanger alt, inkludert feil fra databasen, og skriver
+  `Kan ikke sortere!` uansett årsak. En feilstavet barnehage i skjemaet og en låst eller ødelagt
+  databasefil ser helt like ut, og begge ender med `AVSLAG` til en søker som kanskje skulle fått
+  plass. Feil som burde stoppet applikasjonen, blir i stedet til et svar.
+- Prioriteringslisten parses med `split(', ')` og ingenting mer. Skriver du komma uten mellomrom,
+  blir hele strengen ett navn som ikke matcher noe. Navnene er `isin`-matchet og dermed
+  bokstavrette, og ukjente navn forsvinner stille. Søkeren får aldri vite at prioriteringen ble
+  ignorert, og svaret ser ut som et helt vanlig vedtak. En nedtrekksliste per prioritet hadde
+  fjernet hele problemet.
+- Fallbacken ved akkurat en prioritering er inkonsistent. Har søkeren ingen fortrinnsrett, oppgir
+  nøyaktig en barnehage og den er full, forkastes prioriteringen og `gi_plass` gir hvilken som
+  helst barnehage. Med to eller flere fulle prioriteringer blir svaret `AVSLAG`. To søkere i samme
+  situasjon får altså forskjellig svar avhengig av hvor mange barnehager de gadd å skrive opp.
+  Sjekken `len(prioritert) == 1` har ingen motpart i fortrinnsrettgrenen.
+- «Fortrinnsrett - Annet» og «Har søsken som går i barnehagen» gjør ingenting. Begge feltene finnes
+  i `soknad.html`, men `behandle_soknad` ser kun på `fortrinnsrett_barnevern`,
+  `fortrinnsrett_sykdom_i_familien` og `fortrinnsrett_sykdome_paa_barnet`, og `users`-tabellen har
+  ingen kolonner for de to andre. En søker som begrunner fortrinnsrett i fritekstfeltet, blir
+  behandlet som om hen ikke har fortrinnsrett i det hele tatt.
+- Ingen validering i `/behandle`. Feltene hentes med `request.form['...']`, som gir 400 hvis et
+  felt mangler, og en helt tom søknad godtas uten innvendinger. `instance/db.sqlite3` i repoet
+  inneholder nettopp en slik rad: alle felt tomme, status `AVSLAG`.
+- Ruten `/svar` viser en tom tabell. Den henter `session['information']` og sender den videre som
+  `data`, mens `svar.html` leser `sdHar` og `sdStat`. Cellene blir derfor alltid tomme, og ruten
+  gir 500 hvis ingen søknad ligger i sesjonen. Det virkelige svaret kommer fra `POST /behandle`,
+  som rendrer den samme malen med riktige variabler. `/svar` er en rest som burde vært fjernet.
+- `kommune_bar` krasjer på ukjent kommune. `str.fullmatch` er bokstavrett og eksakt, så en
+  skrivefeil eller liten forbokstav gir et tomt utvalg, og `reduce` over en tom liste kaster
+  `TypeError` som Flask svarer 500 på. `kommune.html` er et fritt tekstfelt uten noen liste over
+  gyldige navn, så feilen er lett å treffe. Funksjonen er den samme koden som `kommune_pie` i
+  OBLIG 3 og arver de samme forutsetningene: `pop(0)` antar at `Sted` er første kolonne, og
+  `columns.difference(['Sted'])` antar at kolonnene sorterer alfabetisk i samme rekkefølge som i
+  arket. Det stemmer for `Y2015` til `Y2023`, men er en forutsetning og ikke en garanti.
+- Applikasjonen starter ikke uten `kgdata.xlsx`. `from dbexcel import *` øverst i
+  `kgcontroller.py` leser Excel-filen ved import, selv om hele pandas-laget er ubrukt under
+  kjøring: `form_to_object_soknad`, `insert_soknad`, `commit_all` og `select_alle_barnehager`
+  importeres i `kg.py` og kalles aldri, og `Foresatt`, `Barn` og `Soknad` blir aldri laget. Bare
+  `behandle_soknad` og `kommune_bar` er i faktisk bruk. Filen må altså ligge der for en modul
+  ingenting spør etter.
 
 ## Lisens
 
