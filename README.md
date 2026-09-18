@@ -1,19 +1,20 @@
-# Barnehageopptak
+# Kindergarten Admissions
 
-Obligatorisk oppgave 5 i IS-114 ved Universitetet i Agder, høsten 2024. En webapplikasjon for
-søknad om barnehageplass, skrevet i Flask. Applikasjonen tar imot en søknad, behandler den
-automatisk mot antall ledige plasser og gir søkeren umiddelbart svar (`TILBUD` eller `AVSLAG`).
-I tillegg viser den en oversikt over alle barnehager, alle innsendte søknader og statistikk over
-andel barn i barnehage per kommune.
+Mandatory assignment 5 in IS-114 at the University of Agder, autumn 2024. A web application for
+applying for a kindergarten place, written in Flask. The application receives an application,
+processes it automatically against the number of available places and gives the applicant an
+immediate answer (`TILBUD`, an offer, or `AVSLAG`, a rejection). It also shows an overview of all
+kindergartens, all submitted applications and statistics on the share of children in kindergarten
+per municipality.
 
-Utgangspunktet er et kodeskjelett utlevert i emnet, og oppgaveteksten ligger fortsatt igjen på
-forsiden i `index.html`. Det som er skrevet her, er opptaksalgoritmen i `kgcontroller.py`, malene
-for svar, søknadsoversikt, barnehageliste og kommunestatistikk, og rutene som hører til dem i
-`kg.py`.
+The starting point is a code skeleton handed out in the course, and the assignment text is still
+left on the front page in `index.html`. What has been written here is the admissions algorithm in
+`kgcontroller.py`, the templates for the answer, application overview, kindergarten list and
+municipality statistics, and the routes belonging to them in `kg.py`.
 
-## Kjøre lokalt
+## Running Locally
 
-Krever Python 3.10+.
+Requires Python 3.10+.
 
 ```bash
 git clone https://github.com/dovidee/is114-tema05.git
@@ -23,116 +24,119 @@ cd barnehage
 python kg.py
 ```
 
-Applikasjonen kjører på `http://127.0.0.1:5000`. Alle stier i koden er relative, så `kg.py` må
-startes fra mappen `barnehage`.
+The application runs on `http://127.0.0.1:5000`. All paths in the code are relative, so `kg.py`
+must be started from the `barnehage` folder.
 
-Excel-databasen skulle kunne bygges på nytt med `python initiatedb.py`, men filen stopper med
-`IndentationError` slik den står (se [Merknader](#merknader)). Barnehagetabellen i
-SQLite-databasen nullstilles ved å fjerne kommentaren rundt blokken «Reset barnehage data» nederst
-i `kg.py` og kjøre filen en gang.
+The Excel database should have been rebuildable with `python initiatedb.py`, but the file stops
+with an `IndentationError` as it stands (see [Notes](#notes)). The kindergarten table in the
+SQLite database is reset by uncommenting the "Reset barnehage data" block at the bottom of `kg.py`
+and running the file once.
 
-## Teknologi
+## Technology
 
-| Komponent | Bruk |
-|-----------|------|
-| Flask | Webrammeverk og ruting |
-| Flask-SQLAlchemy | ORM mot SQLite (`users`, `barnehage`) |
-| sqlite3 | Direkte SQL i opptaksalgoritmen |
-| pandas | Databehandling og lesing av Excel-filer |
-| Plotly Express | Søylediagram over kommunestatistikk |
-| Jinja2 | HTML-maler |
+| Component | Use |
+|-----------|-----|
+| Flask | Web framework and routing |
+| Flask-SQLAlchemy | ORM against SQLite (`users`, `barnehage`) |
+| sqlite3 | Direct SQL in the admissions algorithm |
+| pandas | Data processing and reading of Excel files |
+| Plotly Express | Bar chart of the municipality statistics |
+| Jinja2 | HTML templates |
 
-## Struktur
+## Structure
 
-| Fil | Ansvar |
-|-----|--------|
-| `barnehage/kg.py` | Flask-app, ruter og databasemodeller |
-| `barnehage/kgcontroller.py` | Opptaksalgoritmen, CRUD-metoder og grafgenerering |
-| `barnehage/kgmodel.py` | Dataklasser: `Foresatt`, `Barn`, `Barnehage`, `Soknad` |
-| `barnehage/dbexcel.py` | Leser `kgdata.xlsx` inn i DataFrames |
-| `barnehage/initiatedb.py` | Oppretter Excel-databasen med utgangsdata |
-| `barnehage/templates/` | Jinja2-maler |
+| File | Responsibility |
+|------|----------------|
+| `barnehage/kg.py` | Flask app, routes and database models |
+| `barnehage/kgcontroller.py` | The admissions algorithm, CRUD methods and chart generation |
+| `barnehage/kgmodel.py` | Data classes: `Foresatt`, `Barn`, `Barnehage`, `Soknad` |
+| `barnehage/dbexcel.py` | Reads `kgdata.xlsx` into DataFrames |
+| `barnehage/initiatedb.py` | Creates the Excel database with the initial data |
+| `barnehage/templates/` | Jinja2 templates |
 
-| Rute | Beskrivelse |
-|------|-------------|
-| `/` | Forside |
-| `/barnehager` | Oversikt over barnehager og ledige plasser |
-| `/behandle` | Søknadsskjema (GET) og behandling av søknad (POST) |
-| `/soknader` | Alle innsendte søknader med status |
-| `/kommune` | Søylediagram over andel barn i barnehage for valgt kommune |
+| Route | Description |
+|-------|-------------|
+| `/` | Front page |
+| `/barnehager` | Overview of kindergartens and available places |
+| `/behandle` | Application form (GET) and processing of an application (POST) |
+| `/soknader` | All submitted applications with status |
+| `/kommune` | Bar chart of the share of children in kindergarten for the selected municipality |
 
-## Algoritme for søknadsbehandling
+## Application Processing Algorithm
 
-Behandlingen skjer i `behandle_soknad` i `kgcontroller.py`. Søknaden avgjøres av to felt:
-om søkeren har **fortrinnsrett** (barnevern, sykdom i familien eller sykdom på barnet), og
-hvilke barnehager søkeren har **prioritert**.
+The processing happens in `behandle_soknad` in `kgcontroller.py`. The application is decided by two
+fields: whether the applicant has a **priority right** (child welfare, illness in the family or
+illness in the child), and which kindergartens the applicant has **prioritized**.
 
-Prioriteringene skrives inn som en tekststreng adskilt med komma og mellomrom, i synkende
-prioritet:
+The priorities are entered as a text string separated by comma and space, in descending priority:
 
 ```
 ABC Kindergarten, Tiny Tots Academy, Giggles and Grins Childcare, Playful Pals Daycare
 ```
 
-### Steg
+### Steps
 
-1. Prioriteringsstrengen splittes på `", "` til en liste. Tom streng betyr ingen prioritering.
-2. Barnehagetabellen leses fra SQLite inn i en DataFrame med navn, antall plasser og ledige
-   plasser.
-3. Søknaden følger en av fire grener, avhengig av fortrinnsrett og prioritering (se tabellen
-   under).
-4. Når en plass tildeles, oppdateres barnehagen i databasen: `barnehage_ledige_plasser`
-   reduseres med 1 og `barnehage_antall_plasser` økes med 1.
-5. Søknaden lagres i tabellen `users` med tildelt barnehage, status og fortrinnsrett.
+1. The priority string is split on `", "` into a list. An empty string means no priorities.
+2. The kindergarten table is read from SQLite into a DataFrame with name, number of places and
+   available places.
+3. The application follows one of four branches, depending on priority right and priorities (see
+   the table below).
+4. When a place is assigned, the kindergarten is updated in the database:
+   `barnehage_ledige_plasser` is decreased by 1 and `barnehage_antall_plasser` is increased by 1.
+5. The application is stored in the `users` table with the assigned kindergarten, status and
+   priority right.
 
-### Grener
+### Branches
 
-| Fortrinnsrett | Prioritering | Rekkefølge på forsøk |
-|---------------|--------------|----------------------|
-| Nei | Nei | `gi_plass`, ellers `AVSLAG` |
-| Nei | Ja | `gi_plass_prio`, så `gi_plass` (kun hvis nøyaktig en prioritering), ellers `AVSLAG` |
-| Ja | Nei | `gi_plass`, så `stjel_plass`, ellers `AVSLAG` |
-| Ja | Ja | `gi_plass_prio`, så `gi_plass`, så `stjel_plass_full`, ellers `AVSLAG` |
+| Priority right | Priorities | Order of attempts |
+|----------------|------------|-------------------|
+| No | No | `gi_plass`, otherwise `AVSLAG` |
+| No | Yes | `gi_plass_prio`, then `gi_plass` (only if exactly one priority), otherwise `AVSLAG` |
+| Yes | No | `gi_plass`, then `stjel_plass`, otherwise `AVSLAG` |
+| Yes | Yes | `gi_plass_prio`, then `gi_plass`, then `stjel_plass_full`, otherwise `AVSLAG` |
 
-### Tildelingsmetoder
+### Assignment Methods
 
-**`gi_plass`**: fritt valg. Barnehager uten ledige plasser filtreres bort, resten sorteres
-synkende på antall ledige plasser, og den øverste velges. Søkeren får altså barnehagen med flest
-ledige plasser. Feiler hvis ingen barnehager har ledige plasser.
+**`gi_plass`**: free choice. Kindergartens without available places are filtered out, the rest are
+sorted in descending order by number of available places, and the top one is chosen. The applicant
+therefore gets the kindergarten with the most available places. Fails if no kindergarten has
+available places.
 
-**`gi_plass_prio`**: prioritert valg. Kun de prioriterte barnehagene beholdes. Disse sorteres i
-den rekkefølgen søkeren oppga, deretter fjernes de uten ledige plasser, og den øverste velges.
-Søkeren får altså den høyest prioriterte barnehagen som faktisk har en ledig plass. Feiler hvis
-ingen av de prioriterte barnehagene har ledige plasser.
+**`gi_plass_prio`**: prioritized choice. Only the prioritized kindergartens are kept. These are
+sorted in the order the applicant gave, then those without available places are removed, and the
+top one is chosen. The applicant therefore gets the highest prioritized kindergarten that actually
+has an available place. Fails if none of the prioritized kindergartens have available places.
 
-**`stjel_plass`**: kun ved fortrinnsrett når ingen plasser er ledige. Den nyeste søknaden uten
-fortrinnsrett som har status `TILBUD` settes til `AVSLAG`, og plassen gis til søkeren med
-fortrinnsrett. Feiler hvis alle eksisterende tilbud tilhører søkere med fortrinnsrett.
+**`stjel_plass`**: only with priority right, when no places are available. The most recent
+application without priority right that has status `TILBUD` is set to `AVSLAG`, and the place is
+given to the applicant with priority right. Fails if all existing offers belong to applicants with
+priority right.
 
-**`stjel_plass_full`**: samme prinsipp, men målrettet. Barnehager uten tildelte plasser
-filtreres bort, resten sorteres, og den nyeste søknaden uten fortrinnsrett i den øverste
-barnehagen settes til `AVSLAG`. Finnes ingen slik søknad, faller metoden tilbake til å frigjøre en
-vilkårlig plass som i `stjel_plass`. Sorteringen er ment å plukke barnehagen med flest tildelte
-plasser, men gjør det ikke (se [Merknader](#merknader)).
+**`stjel_plass_full`**: the same principle, but targeted. Kindergartens without assigned places are
+filtered out, the rest are sorted, and the most recent application without priority right in the
+top kindergarten is set to `AVSLAG`. If no such application exists, the method falls back to
+freeing an arbitrary place as in `stjel_plass`. The sort is meant to pick the kindergarten with the
+most assigned places, but does not (see [Notes](#notes)).
 
-### Eksempler
+### Examples
 
-Med utgangsdataene fra `initiatedb.py`, der `ABC Kindergarten` og `Giggles and Grins Childcare`
-har null ledige plasser:
+With the initial data from `initiatedb.py`, where `ABC Kindergarten` and
+`Giggles and Grins Childcare` have zero available places:
 
-- `ABC Kindergarten, Tiny Tots Academy, Giggles and Grins Childcare` gir
-  **Tiny Tots Academy**, fordi førsteprioriteten er full og neste prioritet med ledig plass velges.
-- `ABC Kindergarten` alene: prioriteringen forkastes, og søkeren får barnehagen med flest ledige
-  plasser (**Sunshine Preschool**). Med flere enn en prioritering, der ingen har ledig plass, blir
-  svaret `AVSLAG` i stedet.
+- `ABC Kindergarten, Tiny Tots Academy, Giggles and Grins Childcare` gives
+  **Tiny Tots Academy**, because the first priority is full and the next priority with an available
+  place is chosen.
+- `ABC Kindergarten` on its own: the priority is discarded, and the applicant gets the kindergarten
+  with the most available places (**Sunshine Preschool**). With more than one priority, where none
+  has an available place, the answer is `AVSLAG` instead.
 
-## Feilsøking
+## Troubleshooting
 
 ### `attempt to write a readonly database`
 
-Feilen betyr at prosessen som kjører applikasjonen ikke har skriverettigheter på SQLite-filen.
-SQLite oppretter også en journalfil ved siden av databasen, så **mappen** `instance/` må være
-skrivbar i tillegg til selve filen:
+The error means that the process running the application does not have write permissions on the
+SQLite file. SQLite also creates a journal file next to the database, so the **folder**
+`instance/` has to be writable in addition to the file itself:
 
 ```bash
 chown www-data:www-data barnehage/instance barnehage/instance/db.sqlite3
@@ -140,91 +144,98 @@ chmod 755 barnehage/instance
 chmod 644 barnehage/instance/db.sqlite3
 ```
 
-Eieren skal være brukeren som **kjører Python-prosessen**. Kjøres applikasjonen med
-`python kg.py` i et terminalvindu, er det din egen bruker, og da trengs ingen `chown` i det hele
-tatt. Under en webtjener er det brukeren til applikasjonstjeneren (mod_wsgi, gunicorn, uWSGI):
+The owner should be the user that **runs the Python process**. If the application is run with
+`python kg.py` in a terminal window, that is your own user, and then no `chown` is needed at all.
+Under a web server it is the user of the application server (mod_wsgi, gunicorn, uWSGI):
 
-| Distribusjon | Apache | Nginx |
+| Distribution | Apache | Nginx |
 |--------------|--------|-------|
 | Debian / Ubuntu | `www-data` | `www-data` |
 | RHEL / Rocky / AlmaLinux / CentOS | `apache` | `nginx` |
 | Fedora | `apache` | `nginx` |
 
-Merk at Nginx normalt bare er en reverse proxy og aldri rører databasefilen selv; det er brukeren
-til prosessen bak proxyen som må ha skrivetilgang. På RHEL-baserte systemer og Fedora kan SELinux
-blokkere skriving selv med riktige rettigheter. Da må filen merkes med
+Note that Nginx is normally only a reverse proxy and never touches the database file itself; it is
+the user of the process behind the proxy that needs write access. On RHEL based systems and Fedora,
+SELinux can block writes even with the correct permissions. The file then has to be labelled with
 `chcon -t httpd_sys_rw_content_t`.
 
-## Merknader
+## Notes
 
-Prosjektet ble aldri gjort ferdig. Oblig 5 falt bort som krav underveis i semesteret, og arbeidet
-stoppet der det sto den dagen. Punktene under er derfor ikke feil som slapp gjennom en innlevering,
-men et bilde av hvor koden lå da den ble lagt fra seg: halvferdige grener, plassholdere merket
-`# fikser senere`, oppgave 3 som aldri ble påbegynt, og et Excel-lag på vei ut til fordel for
-SQLite uten at flyttingen ble fullført. Listen tar for seg det som faktisk ryker eller gir feil
-svar, ikke skrivefeil og ubrukte importer, og står her som notat til meg selv.
+The project was never finished. Assignment 5 was dropped as a requirement during the semester, and
+the work stopped where it stood that day. The points below are therefore not mistakes that slipped
+through a submission, but a picture of where the code lay when it was put down: half finished
+branches, placeholders marked `# fikser senere` (fix later), task 3 which was never started, and an
+Excel layer on its way out in favour of SQLite without the move ever being completed. The list
+covers what actually breaks or gives the wrong answer, not typos and unused imports, and stands
+here as a note to myself.
 
-- `initiatedb.py` kjører ikke. Linje 51 starter en trippel-fnutt-blokk med seks mellomrom innrykk
-  inne i en `with`-blokk som ligger på åtte, og Python stopper med `IndentationError: unindent does
-  not match any outer indentation level` før en eneste linje er utført. `kgdata.xlsx` i repoet er
-  altså bygget med en tidligere versjon av filen, og skriptet må rettes før det kan kjøres igjen.
-- `stjel_plass` returnerer strengen `'Unknown'`. Den finner riktig søknad å sette til `AVSLAG`,
-  men vet ikke hvilken barnehage plassen tilhørte, så søkeren får `TILBUD` i en barnehage som ikke
-  finnes. Barnehagetabellen røres heller ikke, så den frigjorte plassen registreres ingen steder:
-  en søker mister plassen sin, en annen får den, og ingen av tallene i `/barnehager` endrer seg.
-  To `# fikser senere` i samme funksjon sier det meste.
-- `barnehage_antall_plasser` betyr to forskjellige ting. I `initiatedb.py` er det den totale
-  kapasiteten (50, 25, 35, 12, 15, 10, 40), mens i SQLite settes den til `0` av reset-blokken i
-  `kg.py` og økes med 1 for hver tildeling, altså antall **tildelte** plasser. Kolonnen heter
-  likevel «Antall plasser» i `barnehager.html`, så en fersk database påstår at alle sju barnehagene
-  har null plasser totalt og samtidig har ledige plasser. Riktig navn hadde vært
-  `barnehage_tildelte_plasser`.
-- `stjel_plass_full` sorterer på feil kolonne. Kommentaren sier «stjel fra høyeste antall» og
-  filtreringen fjerner riktignok barnehager med `barnehage_antall_plasser == 0`, men
-  `sort_values` sorterer på `barnehage_ledige_plasser`. Metoden nås bare når alt er fullt, altså
-  når alle ledige plasser er 0, så sorteringen gjør ingenting og `df.loc[0]` plukker den første
-  raden i id-rekkefølge. Meningen var `barnehage_antall_plasser`, og resultatet er at plassen
-  stjeles fra en vilkårlig barnehage.
-- To bare `except:` uten unntakstype fanger alt, inkludert feil fra databasen, og skriver
-  `Kan ikke sortere!` uansett årsak. En feilstavet barnehage i skjemaet og en låst eller ødelagt
-  databasefil ser helt like ut, og begge ender med `AVSLAG` til en søker som kanskje skulle fått
-  plass. Feil som burde stoppet applikasjonen, blir i stedet til et svar.
-- Prioriteringslisten parses med `split(', ')` og ingenting mer. Skriver du komma uten mellomrom,
-  blir hele strengen ett navn som ikke matcher noe. Navnene er `isin`-matchet og dermed
-  bokstavrette, og ukjente navn forsvinner stille. Søkeren får aldri vite at prioriteringen ble
-  ignorert, og svaret ser ut som et helt vanlig vedtak. En nedtrekksliste per prioritet hadde
-  fjernet hele problemet.
-- Fallbacken ved akkurat en prioritering er inkonsistent. Har søkeren ingen fortrinnsrett, oppgir
-  nøyaktig en barnehage og den er full, forkastes prioriteringen og `gi_plass` gir hvilken som
-  helst barnehage. Med to eller flere fulle prioriteringer blir svaret `AVSLAG`. To søkere i samme
-  situasjon får altså forskjellig svar avhengig av hvor mange barnehager de gadd å skrive opp.
-  Sjekken `len(prioritert) == 1` har ingen motpart i fortrinnsrettgrenen.
-- «Fortrinnsrett - Annet» og «Har søsken som går i barnehagen» gjør ingenting. Begge feltene finnes
-  i `soknad.html`, men `behandle_soknad` ser kun på `fortrinnsrett_barnevern`,
-  `fortrinnsrett_sykdom_i_familien` og `fortrinnsrett_sykdome_paa_barnet`, og `users`-tabellen har
-  ingen kolonner for de to andre. En søker som begrunner fortrinnsrett i fritekstfeltet, blir
-  behandlet som om hen ikke har fortrinnsrett i det hele tatt.
-- Ingen validering i `/behandle`. Feltene hentes med `request.form['...']`, som gir 400 hvis et
-  felt mangler, og en helt tom søknad godtas uten innvendinger. `instance/db.sqlite3` i repoet
-  inneholder nettopp en slik rad: alle felt tomme, status `AVSLAG`.
-- Ruten `/svar` viser en tom tabell. Den henter `session['information']` og sender den videre som
-  `data`, mens `svar.html` leser `sdHar` og `sdStat`. Cellene blir derfor alltid tomme, og ruten
-  gir 500 hvis ingen søknad ligger i sesjonen. Det virkelige svaret kommer fra `POST /behandle`,
-  som rendrer den samme malen med riktige variabler. `/svar` er en rest som burde vært fjernet.
-- `kommune_bar` krasjer på ukjent kommune. `str.fullmatch` er bokstavrett og eksakt, så en
-  skrivefeil eller liten forbokstav gir et tomt utvalg, og `reduce` over en tom liste kaster
-  `TypeError` som Flask svarer 500 på. `kommune.html` er et fritt tekstfelt uten noen liste over
-  gyldige navn, så feilen er lett å treffe. Funksjonen er den samme koden som `kommune_pie` i
-  OBLIG 3 og arver de samme forutsetningene: `pop(0)` antar at `Sted` er første kolonne, og
-  `columns.difference(['Sted'])` antar at kolonnene sorterer alfabetisk i samme rekkefølge som i
-  arket. Det stemmer for `Y2015` til `Y2023`, men er en forutsetning og ikke en garanti.
-- Applikasjonen starter ikke uten `kgdata.xlsx`. `from dbexcel import *` øverst i
-  `kgcontroller.py` leser Excel-filen ved import, selv om hele pandas-laget er ubrukt under
-  kjøring: `form_to_object_soknad`, `insert_soknad`, `commit_all` og `select_alle_barnehager`
-  importeres i `kg.py` og kalles aldri, og `Foresatt`, `Barn` og `Soknad` blir aldri laget. Bare
-  `behandle_soknad` og `kommune_bar` er i faktisk bruk. Filen må altså ligge der for en modul
-  ingenting spør etter.
+- `initiatedb.py` does not run. Line 51 opens a triple quoted block indented six spaces inside a
+  `with` block indented eight, and Python stops with `IndentationError: unindent does not match any
+  outer indentation level` before a single line has been executed. The `kgdata.xlsx` in the repo
+  was therefore built with an earlier version of the file, and the script has to be fixed before it
+  can be run again.
+- `stjel_plass` returns the string `'Unknown'`. It finds the right application to set to `AVSLAG`,
+  but does not know which kindergarten the place belonged to, so the applicant gets `TILBUD` at a
+  kindergarten that does not exist. The kindergarten table is not touched either, so the freed place
+  is registered nowhere: one applicant loses their place, another gets it, and none of the numbers
+  in `/barnehager` change. Two `# fikser senere` comments in the same function say most of it.
+- `barnehage_antall_plasser` means two different things. In `initiatedb.py` it is the total capacity
+  (50, 25, 35, 12, 15, 10, 40), while in SQLite it is set to `0` by the reset block in `kg.py` and
+  increased by 1 for every assignment, that is, the number of **assigned** places. The column is
+  nevertheless labelled "Antall plasser" (number of places) in `barnehager.html`, so a fresh
+  database claims that all seven kindergartens have zero places in total and at the same time have
+  available places. The correct name would have been `barnehage_tildelte_plasser`.
+- `stjel_plass_full` sorts on the wrong column. The comment says "steal from the highest count" and
+  the filtering does remove kindergartens with `barnehage_antall_plasser == 0`, but `sort_values`
+  sorts on `barnehage_ledige_plasser`. The method is only reached when everything is full, that is,
+  when every available place count is 0, so the sort does nothing and `df.loc[0]` picks the first
+  row in id order. The intention was `barnehage_antall_plasser`, and the result is that the place is
+  stolen from an arbitrary kindergarten.
+- Two bare `except:` clauses without an exception type catch everything, including errors from the
+  database, and print `Kan ikke sortere!` (cannot sort) whatever the cause. A misspelled
+  kindergarten in the form and a locked or corrupted database file look exactly alike, and both end
+  in `AVSLAG` for an applicant who might have been entitled to a place. Errors that should have
+  stopped the application turn into an answer instead.
+- The priority list is parsed with `split(', ')` and nothing more. If you write a comma without a
+  space, the whole string becomes one name that matches nothing. The names are matched with `isin`
+  and are therefore literal, and unknown names disappear silently. The applicant never learns that
+  the priority was ignored, and the answer looks like a perfectly ordinary decision. A dropdown per
+  priority would have removed the whole problem.
+- The fallback at exactly one priority is inconsistent. If the applicant has no priority right,
+  names exactly one kindergarten and it is full, the priority is discarded and `gi_plass` gives any
+  kindergarten at all. With two or more full priorities the answer is `AVSLAG`. Two applicants in
+  the same situation therefore get different answers depending on how many kindergartens they
+  bothered to list. The check `len(prioritert) == 1` has no counterpart in the priority right
+  branch.
+- "Fortrinnsrett - Annet" (priority right, other) and "Har søsken som går i barnehagen" (has a
+  sibling attending the kindergarten) do nothing. Both fields exist in `soknad.html`, but
+  `behandle_soknad` looks only at `fortrinnsrett_barnevern`, `fortrinnsrett_sykdom_i_familien` and
+  `fortrinnsrett_sykdome_paa_barnet`, and the `users` table has no columns for the other two. An
+  applicant who justifies a priority right in the free text field is processed as if they had no
+  priority right at all.
+- No validation in `/behandle`. The fields are fetched with `request.form['...']`, which gives a 400
+  if a field is missing, and a completely empty application is accepted without objection. The
+  `instance/db.sqlite3` in the repo contains exactly such a row: every field empty, status
+  `AVSLAG`.
+- The `/svar` route shows an empty table. It fetches `session['information']` and passes it on as
+  `data`, while `svar.html` reads `sdHar` and `sdStat`. The cells are therefore always empty, and
+  the route gives a 500 if no application is in the session. The real answer comes from
+  `POST /behandle`, which renders the same template with the right variables. `/svar` is a leftover
+  that should have been removed.
+- `kommune_bar` crashes on an unknown municipality. `str.fullmatch` is literal and exact, so a typo
+  or a lowercase first letter gives an empty selection, and `reduce` over an empty list raises a
+  `TypeError` that Flask answers with a 500. `kommune.html` is a free text field without any list of
+  valid names, so the error is easy to hit. The function is the same code as `kommune_pie` in
+  OBLIG 3 and inherits the same assumptions: `pop(0)` assumes that `Sted` is the first column, and
+  `columns.difference(['Sted'])` assumes that the columns sort alphabetically in the same order as
+  in the sheet. That holds for `Y2015` to `Y2023`, but it is an assumption and not a guarantee.
+- The application will not start without `kgdata.xlsx`. `from dbexcel import *` at the top of
+  `kgcontroller.py` reads the Excel file on import, even though the entire pandas layer is unused at
+  runtime: `form_to_object_soknad`, `insert_soknad`, `commit_all` and `select_alle_barnehager` are
+  imported in `kg.py` and never called, and `Foresatt`, `Barn` and `Soknad` are never created. Only
+  `behandle_soknad` and `kommune_bar` are in actual use. The file therefore has to be present for a
+  module nothing asks for.
 
-## Lisens
+## License
 
-CC0 1.0 Universal. Se [LICENSE](LICENSE).
+CC0 1.0 Universal. See [LICENSE](LICENSE).
